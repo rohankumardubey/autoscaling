@@ -32,6 +32,7 @@ type AutoscaleEnforcer struct {
 	handle   framework.Handle
 	vmClient *vmclient.Clientset
 	state    pluginState
+	metrics  PromMetrics
 }
 
 // Compile-time checks that AutoscaleEnforcer actually implements the interfaces we want it to
@@ -73,11 +74,12 @@ func makeAutoscaleEnforcerPlugin(ctx context.Context, obj runtime.Object, h fram
 	p := AutoscaleEnforcer{
 		handle:   h,
 		vmClient: vmClient,
-		// remaining fields are set by p.readClusterState
+		// remaining fields are set by p.readClusterState and p.startPrometheusServer
 		state: pluginState{ //nolint:exhaustruct // see above.
 			lock: util.NewChanMutex(),
 			conf: config,
 		},
+		metrics: PromMetrics{}, //nolint:exhaustruct // set by startPrometheusServer
 	}
 
 	// Start watching deletion events...
@@ -109,6 +111,10 @@ func makeAutoscaleEnforcerPlugin(ctx context.Context, obj runtime.Object, h fram
 			}
 		}
 	}()
+
+	if err := p.startPrometheusServer(ctx); err != nil {
+		return nil, fmt.Errorf("Error starting prometheus server: %w", err)
+	}
 
 	if err := p.startPermitHandler(ctx); err != nil {
 		return nil, fmt.Errorf("permit handler: %w", err)
@@ -185,6 +191,8 @@ func (e *AutoscaleEnforcer) Filter(
 	pod *corev1.Pod,
 	nodeInfo *framework.NodeInfo,
 ) *framework.Status {
+	e.metrics.pluginCalls.WithLabelValues("filter").Inc()
+
 	nodeName := nodeInfo.Node().Name // TODO: nodes also have namespaces? are they used at all?
 
 	pName := api.PodName{Name: pod.Name, Namespace: pod.Namespace}
@@ -366,6 +374,8 @@ func (e *AutoscaleEnforcer) Score(
 	pod *corev1.Pod,
 	nodeName string,
 ) (int64, *framework.Status) {
+	e.metrics.pluginCalls.WithLabelValues("score").Inc()
+
 	scoreLen := framework.MaxNodeScore - framework.MinNodeScore
 
 	podName := api.PodName{Name: pod.Name, Namespace: pod.Namespace}
@@ -434,6 +444,8 @@ func (e *AutoscaleEnforcer) Reserve(
 	pod *corev1.Pod,
 	nodeName string,
 ) *framework.Status {
+	e.metrics.pluginCalls.WithLabelValues("reserve").Inc()
+
 	pName := api.PodName{Name: pod.Name, Namespace: pod.Namespace}
 	klog.Infof("[autoscale-enforcer] Reserve: Handling request for pod %v, node %s", pName, nodeName)
 
@@ -607,6 +619,8 @@ func (e *AutoscaleEnforcer) Unreserve(
 	pod *corev1.Pod,
 	nodeName string,
 ) {
+	e.metrics.pluginCalls.WithLabelValues("unreserve").Inc()
+
 	pName := api.PodName{Name: pod.Name, Namespace: pod.Namespace}
 	klog.Infof("[autoscale-enforcer] Unreserve: Handling request for pod %v, node %s", pName, nodeName)
 

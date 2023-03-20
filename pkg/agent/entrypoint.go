@@ -60,7 +60,10 @@ func (r MainRunner) Run(ctx context.Context) error {
 		go RunBillingMetricsCollector(ctx, r.Config.Billing, r.EnvArgs.K8sNodeName, vmWatchStore)
 	}
 
-	globalState := r.newAgentState(r.EnvArgs.K8sPodIP, broker, schedulerStore)
+	globalState, err := r.newAgentState(r.EnvArgs.K8sPodIP, broker, schedulerStore)
+	if err != nil {
+		return fmt.Errorf("Error creating global state: %w", err)
+	}
 
 	klog.Info("Entering main loop")
 	for {

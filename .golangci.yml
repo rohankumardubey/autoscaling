@@ -50,6 +50,7 @@ linters-settings:
       # metav1.{GetOptions,ListOptions,WatchOptions,PatchOptions}
       - '^k8s\.io/apimachinery/pkg/apis/meta/v1\.(Get|List|Watch|Patch)Options$'
       - '^k8s\.io/apimachinery/pkg/api/resource\.Quantity$'
+      - '^github.com/prometheus/client_golang/prometheus(/.*)?\.\w+Opts$'
       - '^github\.com/containerd/cgroups/v3/cgroup2\.(Resources|Memory)'
       - '^github\.com/tychoish/fun/pubsub\.BrokerOptions$'
 

@@ -28,7 +28,7 @@ nodes:
   extraMounts:
   - hostPath: kind/cni-bin
     containerPath: /opt/cni/bin
-- role: worker
-  extraMounts:
-  - hostPath: kind/cni-bin
-    containerPath: /opt/cni/bin
+# - role: worker
+#   extraMounts:
+#   - hostPath: kind/cni-bin
+#     containerPath: /opt/cni/bin

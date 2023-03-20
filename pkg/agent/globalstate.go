@@ -23,6 +23,8 @@ import (
 //
 // All fields are immutable, except pods.
 type agentState struct {
+	mu sync.Mutex
+
 	pods                 map[api.PodName]*podState
 	podIP                string
 	config               *Config
@@ -30,10 +32,12 @@ type agentState struct {
 	vmClient             *vmclient.Clientset
 	schedulerEventBroker *pubsub.Broker[watchEvent]
 	schedulerStore       *util.WatchStore[corev1.Pod]
+	metrics              PromMetrics
 }
 
-func (r MainRunner) newAgentState(podIP string, broker *pubsub.Broker[watchEvent], schedulerStore *util.WatchStore[corev1.Pod]) agentState {
-	return agentState{
+func (r MainRunner) newAgentState(podIP string, broker *pubsub.Broker[watchEvent], schedulerStore *util.WatchStore[corev1.Pod]) (*agentState, error) {
+	state := &agentState{
+		mu:                   sync.Mutex{},
 		pods:                 make(map[api.PodName]*podState),
 		config:               r.Config,
 		kubeClient:           r.KubeClient,
@@ -41,7 +45,16 @@ func (r MainRunner) newAgentState(podIP string, broker *pubsub.Broker[watchEvent
 		podIP:                podIP,
 		schedulerEventBroker: broker,
 		schedulerStore:       schedulerStore,
+		metrics:              PromMetrics{}, //nolint:exhaustruct // set below
 	}
+
+	var err error
+	state.metrics, err = startPrometheusServer(state)
+	if err != nil {
+		return nil, fmt.Errorf("Error starting prometheus server: %w", err)
+	}
+
+	return state, nil
 }
 
 func podIsOurResponsibility(pod *corev1.Pod, config *Config, nodeName string) bool {
@@ -52,6 +65,9 @@ func podIsOurResponsibility(pod *corev1.Pod, config *Config, nodeName string) bo
 }
 
 func (s *agentState) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for _, pod := range s.pods {
 		pod.stop()
 	}
@@ -59,6 +75,9 @@ func (s *agentState) Stop() {
 
 func (s *agentState) handleEvent(ctx context.Context, event podEvent) {
 	klog.Infof("Handling pod event %+v", event)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	state, hasPod := s.pods[event.podName]
 
