@@ -38,6 +38,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/lib/pq v1.10.7
 	github.com/neondatabase/neonvm v0.4.6
+	github.com/prometheus/client_golang v1.14.0
 	github.com/tychoish/fun v0.7.1
 	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	k8s.io/api v0.23.15
@@ -96,7 +97,6 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/opencontainers/selinux v1.10.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
