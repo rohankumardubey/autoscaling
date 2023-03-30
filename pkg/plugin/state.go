@@ -193,10 +193,10 @@ type podResourceState[T any] struct {
 	//
 	// After the first communication from the autoscaler-agent, we update Reserved to match its
 	// value, and set Buffer to zero.
-	Buffer T
+	Buffer T `json:"buffer"`
 	// CapacityPressure is this pod's contribution to this pod's node's CapacityPressure for this
 	// resource
-	CapacityPressure T
+	CapacityPressure T `json:"capacityPressure"`
 }
 
 // otherPodState tracks a little bit of information for the non-VM pods we're handling
